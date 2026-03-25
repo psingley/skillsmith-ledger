@@ -52,29 +52,32 @@ Attempted to dispatch synthesis work to Codex CLI. Discovered:
 - Claude CLI works for sonnet
 - Need to build a Python orchestrator script instead of relying on Codex CLI directly
 
-### 6. Architectural Insight — Manus as Harness
+### 6. Architectural Insight — Three-Layer Agent Stack
 
-User articulated the role split:
-- **Manus** = the harness/orchestrator. Understands intent, tracks inputs vs outputs, maintains narrative, manages workers.
-- **GPT/Claude/Gemini** = workers. Do the heavy synthesis, critique, implementation.
+User articulated a precise role split after watching Manus burn context on orchestration work:
+
+- **Manus** = conversationalist layer. Understands intent, tracks narrative, makes high-level decisions, reports back. Should be LIGHTWEIGHT — never doing long-running work or orchestration grunt work.
+- **Copilot CLI** (gh copilot) = orchestration layer. Gets dispatched with structured tasks. Has near-endless context with GPT 5.4 xhigh. Built for long-running, coherent, well-aligned software engineering work. Calls other agents.
+- **Claude CLI / GPT API / Gemini** = worker layer. Actual synthesis, critique, code generation, implementation.
 - **User** = human-in-the-loop. Provides direction, validates decisions, course-corrects.
 
-This IS the harness pattern from the videos, applied to our own workflow.
+Key correction from user: Manus was trying to do too much — building chain scripts, running multi-round synthesis, managing processes. That's the orchestration layer's job (Copilot CLI), not the conversationalist layer's job (Manus).
+
+### 7. Copilot CLI — Installed and Available
+
+Installed `gh copilot` extension. Available commands: `suggest`, `explain`, `alias`. This is the `gh copilot` CLI, which provides command suggestions. The user's reference to "Copilot CLI" as an orchestration layer likely refers to using it in combination with the broader GitHub Copilot ecosystem for long-running agent work. Exact dispatch pattern still to be formalized.
 
 ## Decisions Made
 
 1. **noiseOS is the new top-level project** — it subsumes youtube-comprehension as a signal adapter and uses Skillsmith as an internal tool
 2. **Walk the trail first, formalize second** — manual synthesis of 10 videos IS the first noiseOS run
-3. **Manus stays at orchestrator level** — delegate synthesis/critique to worker models via API/CLI
-4. **Accretion = the chain itself** — each round of GPT→Claude→GPT adds a layer, producing versioned artifacts with provenance
+3. **Manus is the conversationalist, NOT the orchestrator** — Manus tracks intent and narrative. Copilot CLI / dedicated orchestrator handles long-running multi-agent coordination. Manus should never burn context on implementation or orchestration grunt work.
+4. **Accretion = the chain itself** — each round of agent→agent adds a layer, producing versioned artifacts with provenance
+5. **Skillsmith is a skill inside harnesses** — it's the skill creator with prescribed features, not the harness itself. noiseOS (or any harness) uses Skillsmith as an internal tool.
 
 ## Active Work
 
-Building a Python orchestrator script (`chain.py`) that:
-1. Sends the unified video dataset to GPT (gpt-4.1-mini via OpenAI API) for discourse synthesis
-2. Sends the synthesis to Claude (sonnet via Claude CLI) for critique
-3. Sends the critique back to GPT for response and convergence
-4. Produces a graded discourse map and engineering decision
+**Paused.** The multi-agent chain for discourse synthesis has not yet run. The round1_prompt.md is written and the unified dataset (input.json) is prepared in /home/ubuntu/noiseOS/. Codex CLI failed (model restrictions on ChatGPT account). The dispatch pattern needs to be formalized — likely Copilot CLI or a Python script that Manus kicks off and monitors without doing the work itself.
 
 ## Commits
 
@@ -84,8 +87,30 @@ Building a Python orchestrator script (`chain.py`) that:
 
 ## Next Steps
 
-1. Complete the multi-agent chain and produce the discourse synthesis
-2. Extract engineering decisions from the synthesis
-3. Document the process as the noiseOS trail spec
-4. Decide: create `psingley/noiseOS` repo or keep it in skillsmith?
-5. Update Skillsmith Plan.md to reflect the new project hierarchy
+1. **Formalize the dispatch pattern** — how does Manus kick off Copilot CLI / orchestrator for long-running work? What's the interface?
+2. **Run the discourse synthesis** — dispatch the 10-video cross-reference to the orchestrator layer
+3. **Extract engineering decisions** — what should we build next, informed by the signal?
+4. **Document the trail** — the process we walked becomes the noiseOS spec
+5. **Create `psingley/noiseOS` repo** — or decide where it lives
+6. **Merge Skillsmith PR #1** — no reason to leave it open
+7. **Update Skillsmith Plan.md** — reflect that Skillsmith is a tool inside noiseOS, not the top-level system
+
+## Available Tools (confirmed working)
+
+| Tool | Status | Model | Use Case |
+|------|--------|-------|----------|
+| OpenAI API (Manus proxy) | Working | gpt-4.1-mini, gpt-4.1-nano, gemini-2.5-flash | Worker: synthesis, analysis |
+| Claude CLI | Working | sonnet | Worker: critique, code generation |
+| Codex CLI | Broken for o3/o4-mini | ChatGPT account model restrictions | Not usable for heavy work |
+| Copilot CLI (gh copilot) | Installed | suggest/explain only | Needs further exploration for orchestration |
+| Gemini API (Google) | Working but daily quota limited (20/day free tier) | gemini-2.5-flash | Video analysis, transcript analysis |
+
+## Artifacts Produced This Session
+
+| File | Location | Description |
+|------|----------|-------------|
+| unified_discourse.json | /home/ubuntu/noiseOS/input.json | All 10 videos normalized into single dataset |
+| round1_prompt.md | /home/ubuntu/noiseOS/rounds/ | Synthesis prompt ready for dispatch |
+| video-review-notes.md | /home/ubuntu/ | Manual notes on all 10 videos |
+| PROJECT-BRIEFING.md | /home/ubuntu/ | Full project status briefing |
+| Session log | skillsmith-ledger | This file |
